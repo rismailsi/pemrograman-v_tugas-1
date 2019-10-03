@@ -24,5 +24,5 @@ docker-compose up
 
 Browse to http://localhost to test the app
 
-Browse to http://locathost:8081 to access pgweb
+Browse to http://localhost:8081 to access pgweb
 
