@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	_ "github.com/lib/pq"
 )
@@ -27,8 +28,8 @@ type DatabaseHandler struct {
 type View struct {
 	Students     []*Student
 	Student      Student
+	SearchByName string
 	ErrorMessage string
-	IsError      bool
 }
 
 // Untuk mempermudah penilaian, semua logic ada di file ini
@@ -49,22 +50,30 @@ func main() {
 		view := &View{}
 
 		if id := r.FormValue("id"); id != "" {
-			view.Student.ID = id
+			view.Student.ID = strings.TrimSpace(id)
 
 			if _, err := strconv.Atoi(view.Student.ID); err != nil {
-				view.ErrorMessage = "NIP harus berupa angka"
-				view.IsError = true
+				view.ErrorMessage = "NIP harus berupa angka.  "
 			}
 		}
 		if name := r.FormValue("name"); name != "" {
-			view.Student.Name = name
+			view.Student.Name = strings.TrimSpace(name)
+
+			if len(view.Student.Name) < 3 || len(view.Student.Name) > 100 {
+				view.ErrorMessage += "Nama harus terdiri dari minimal 3 karakter dan maksimal 100 karakter (termasuk spasi)."
+			}
 		}
-		if view.Student.ID != "" && view.Student.Name != "" && !view.IsError {
+		if view.Student.ID != "" && view.Student.Name != "" && view.ErrorMessage == "" {
 			dbHandler.save(&view.Student)
 			view.Student = Student{}
 		}
 
-		view.Students = dbHandler.getList()
+		if searchByName := r.FormValue("search_by_name"); searchByName != "" {
+			view.SearchByName = searchByName
+			view.Students = dbHandler.search(searchByName)
+		} else {
+			view.Students = dbHandler.getList()
+		}
 
 		if err := templates.ExecuteTemplate(w, "student.html", view); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -135,6 +144,27 @@ func (dh *DatabaseHandler) getList() []*Student {
 	sql := `SELECT * FROM students`
 	students := []*Student{}
 	rows, err := dh.db.Query(sql)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	for rows.Next() {
+		s := &Student{}
+		err := rows.Scan(&s.ID, &s.Name)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		students = append(students, s)
+	}
+
+	return students
+}
+
+func (dh *DatabaseHandler) search(name string) []*Student {
+	sql := `SELECT * FROM students where name ilike '%' || $1 || '%'`
+	students := []*Student{}
+	rows, err := dh.db.Query(sql, name)
 	if err != nil {
 		log.Panic(err)
 	}

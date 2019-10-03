@@ -19,7 +19,7 @@
          <h2>Tugas 1 Pemrograman V 0619124004 Rindi Ismail</h2>
       </div>
 
-      {{if .IsError}}
+      {{if ne .ErrorMessage ""}}
       <div class="alert alert-danger" role="alert">
          {{.ErrorMessage}}
       </div>
@@ -37,9 +37,15 @@
                value="{{.Student.Name}}">
          </div>
          <button type="submit" class="btn btn-primary">Submit</button>
+
+         <div class="input-group mt-5">
+            <input type="text" class="form-control" placeholder="Search by Name" name="search_by_name"
+               value="{{.SearchByName}}">
+         </div>
       </form>
 
-      <table class="table mt-4">
+
+      <table class="table mt-3">
          <thead class="thead-dark">
             <tr>
                <th scope="col">#</th>
